@@ -1,0 +1,19 @@
+[package]
+name = "mastiff"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rocks-eval = { git = "https://github.com/luizirber/2022-06-26-rocksdb-eval.git", version = "0.1.0" }
+clap = { version = "3.2.8", features = [ "derive" ] }
+sourmash = { git = "https://github.com/sourmash-bio/sourmash", branch = "lirber/rkyv_mh" }
+serde_json = "1.0.83"
+# axum deps
+axum = { version = "0.5", features = ["multipart"] }
+tokio = { version = "1.0", features = ["full"] }
+tower = { version = "0.4", features = ["util", "timeout", "load-shed", "limit"] }
+tower-http = { version = "0.3.0", features = ["add-extension", "compression-full", "trace", "fs"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
