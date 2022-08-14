@@ -128,6 +128,8 @@
               oha
               awscli2
               rclone
+              terraform
+              nixpkgs-fmt
           ];
         });
       });
