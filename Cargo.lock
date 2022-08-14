@@ -1354,7 +1354,7 @@ dependencies = [
 [[package]]
 name = "rocks-eval"
 version = "0.1.0"
-source = "git+https://github.com/luizirber/2022-06-26-rocksdb-eval.git#983517f8ef88810fa960434d708bda9925fa74d4"
+source = "git+https://github.com/luizirber/2022-06-26-rocksdb-eval.git#648e6b84a532e662f7b6de84b605013aa00b593d"
 dependencies = [
  "byteorder",
  "clap",

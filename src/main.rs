@@ -16,7 +16,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use clap::Parser;
 use rocks_eval::RevIndex;
-use sourmash::signature::Signature;
+use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
 use sourmash::sketch::Sketch;
 
@@ -120,12 +120,12 @@ impl State {
         let threshold = self.threshold;
         let template = self.template.clone();
 
-        let res = tokio::task::spawn_blocking(move || {
+        let (matches, query_size) = tokio::task::spawn_blocking(move || {
             if let Some(sketch) = query.select_sketch(&template) {
                 if let Sketch::MinHash(mh) = sketch {
                     let counter = db.counter_for_query(mh);
                     let matches = db.matches_from_counter(counter, threshold);
-                    matches
+                    (matches, mh.size() as f64)
                 } else {
                     todo!()
                 }
@@ -135,7 +135,16 @@ impl State {
         })
         .await?;
 
-        Ok(res)
+        let mut csv = vec!["SRA accession,containment".into()];
+        csv.extend(matches.into_iter().map(|(mut path, size)| {
+            let containment = size as f64 / query_size;
+            format!(
+                "{},{}",
+                path.split("/").last().unwrap().split(".").next().unwrap(),
+                containment
+            )
+        }));
+        Ok(csv)
     }
 }
 
