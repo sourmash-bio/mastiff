@@ -120,14 +120,10 @@ impl State {
         let template = self.template.clone();
 
         let (matches, query_size) = tokio::task::spawn_blocking(move || {
-            if let Some(sketch) = query.select_sketch(&template) {
-                if let Sketch::MinHash(mh) = sketch {
-                    let counter = db.counter_for_query(mh);
-                    let matches = db.matches_from_counter(counter, threshold);
-                    (matches, mh.size() as f64)
-                } else {
-                    todo!()
-                }
+            if let Some(Sketch::MinHash(mh)) = query.select_sketch(&template) {
+                let counter = db.counter_for_query(mh);
+                let matches = db.matches_from_counter(counter, threshold);
+                (matches, mh.size() as f64)
             } else {
                 todo!()
             }
@@ -139,7 +135,7 @@ impl State {
             let containment = size as f64 / query_size;
             format!(
                 "{},{}",
-                path.split("/").last().unwrap().split(".").next().unwrap(),
+                path.split('/').last().unwrap().split('.').next().unwrap(),
                 containment
             )
         }));
@@ -159,7 +155,7 @@ async fn search(
 }
 
 fn parse_sig(raw_data: &[u8]) -> Result<Signature, BoxError> {
-    let sig = Signature::from_reader(&raw_data[..])?.swap_remove(0);
+    let sig = Signature::from_reader(raw_data)?.swap_remove(0);
     Ok(sig)
 }
 
