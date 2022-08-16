@@ -3,15 +3,14 @@ use std::{borrow::Cow, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration
 use axum::{
     body::Bytes,
     error_handling::HandleErrorLayer,
-    extract::{ContentLengthLimit, Extension, Multipart, Path},
-    handler::Handler,
+    extract::{ContentLengthLimit, Extension},
     http::StatusCode,
     response::IntoResponse,
-    routing::{get, get_service, post},
-    Json, Router,
+    routing::{get_service, post},
+    Router,
 };
 use tower::{BoxError, ServiceBuilder};
-use tower_http::{compression::CompressionLayer, services::ServeDir, trace::TraceLayer};
+use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use clap::Parser;
@@ -136,7 +135,7 @@ impl State {
         .await?;
 
         let mut csv = vec!["SRA accession,containment".into()];
-        csv.extend(matches.into_iter().map(|(mut path, size)| {
+        csv.extend(matches.into_iter().map(|(path, size)| {
             let containment = size as f64 / query_size;
             format!(
                 "{},{}",

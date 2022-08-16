@@ -2,7 +2,7 @@
   description = "Deploy a full system with hello service as a separate profile";
 
   inputs.deploy-rs.url = "github:serokell/deploy-rs";
-  inputs.mastiff.url = "github:luizirber/2022-08-06-mastiff";
+  inputs.mastiff.url = "github:sourmash-bio/mastiff";
 
   outputs = { self, nixpkgs, deploy-rs, mastiff }: {
 
@@ -55,7 +55,7 @@
 
     deploy.nodes."mastiff" = {
       sshOpts = [ "-p" "22" "-i" "~/.aws/Luiz-sourmash.pem" ];
-      hostname = "54.201.45.218";
+      hostname = "mastiff.sourmash.bio";
       fastConnection = false;
       profiles = {
         system = {
