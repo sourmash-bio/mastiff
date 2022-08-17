@@ -103,6 +103,9 @@
         # artifacts from above.
         mastiff = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
+          src = ./.;
+          pname = "mastiff-server";
+          cargoExtraArgs = "--bin mastiff-server";
         });
       in
       {
@@ -130,6 +133,7 @@
               rclone
               terraform
               nixpkgs-fmt
+              asciinema
           ];
         });
       });
