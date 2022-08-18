@@ -37,8 +37,11 @@ static ALLOC: jemallocator::Jemalloc = jemallocator::Jemalloc;
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
-    /// Input sequence file
-    #[clap(parse(from_os_str))]
+    /// Input file. Can be:
+    ///   - sequences (FASTA/Q, compressed or not)
+    ///   - an existing signature (use with --sig)
+    ///   - a single dash ("-") for reading from stdin
+    #[clap(parse(from_os_str), verbatim_doc_comment)]
     sequences: PathBuf,
 
     /// Save results to this file. Default: stdout
@@ -61,7 +64,7 @@ fn main() -> Result<()> {
     } = Cli::parse();
 
     info!("Preparing signature");
-    let sig: Signature = if !is_sig {
+    let (sig, query_name): (Signature, String) = if !is_sig {
         let max_hash = max_hash_for_scaled(1000);
         let mh = KmerMinHashBTree::builder()
             .num(0)
@@ -74,31 +77,37 @@ fn main() -> Result<()> {
             .hash_function("DNA")
             .build();
 
-        let mut parser = if sequences.as_path() == Path::new("-") {
-            parse_fastx_stdin()?
+        let (mut parser, mut query_name) = if sequences.as_path() == Path::new("-") {
+            (parse_fastx_stdin()?, None)
         } else {
-            parse_fastx_file(&sequences)?
+            (
+                parse_fastx_file(&sequences)?,
+                Some(sequences.to_string_lossy().to_string()),
+            )
         };
 
         while let Some(record) = parser.next() {
             let record = record?;
             let seq = record.normalize(false);
             sig.add_sequence(&seq, true)?; // TODO: expose force?
+            if query_name.is_none() {
+                query_name = Some(String::from_utf8_lossy(record.id()).to_string());
+            }
         }
 
-        sig
+        (sig, query_name.expect("Couldn't determine query name"))
     } else {
-        let mut reader = std::io::BufReader::new(std::fs::File::open(sequences)?);
+        let mut reader = std::io::BufReader::new(std::fs::File::open(&sequences)?);
         let mut sigs = Signature::load_signatures(
             &mut reader,
             Some(21),
             Some(HashFunctions::murmur64_DNA),
             Some(1000),
         )?;
-        sigs.swap_remove(0)
+        (sigs.swap_remove(0), sequences.to_string_lossy().to_string())
     };
 
-    let mut output: Box<dyn std::io::Write> = match output {
+    let output: Box<dyn std::io::Write> = match output {
         Some(path) => Box::new(std::io::BufWriter::new(
             std::fs::File::create(path).unwrap(),
         )),
@@ -126,7 +135,21 @@ fn main() -> Result<()> {
         .send()?;
 
     info!("Writing matches to output");
-    output.write_all(&res.bytes()?)?;
+    let data = res.bytes()?;
+
+    let mut wtr = csv::Writer::from_writer(output);
+    let mut rdr = csv::Reader::from_reader(&data[..]);
+
+    let mut headers = rdr.headers()?.clone();
+    headers.push_field("query");
+
+    wtr.write_record(&headers)?;
+
+    for result in rdr.records() {
+        let mut record = result?;
+        record.push_field(query_name.as_str());
+        wtr.write_record(&record)?;
+    }
 
     info!("Finished!");
     Ok(())
