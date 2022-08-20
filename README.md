@@ -11,3 +11,7 @@ sourmash index for searching SRA metagenomes.
 One day they will be integrated back into 
 [sourmash](https://github.com/sourmash-bio/sourmash/)
 and [wort](https://github.com/sourmash-bio/wort/).
+
+## CLI Client
+
+See [the Client README](./crates/client/README.md) for more details.
