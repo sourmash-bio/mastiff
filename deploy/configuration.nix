@@ -22,6 +22,33 @@
     '';
   };
 
+  services.datadog-agent = {
+    enable = true;
+    enableLiveProcessCollection = true;
+    enableTraceAgent = true;
+    tags = [ "mastiff" ];
+    apiKeyFile = "/var/log/datadog/ddagent.key";
+    extraConfig = {
+      logs_enabled = true;
+    };
+    checks = {
+      "journal" = {
+        logs = {
+          type = "journald";
+        };
+      };
+      "caddy" = {
+        logs = {
+          type = "file";
+          path = "/var/log/caddy/access-mastiff.sourmash.bio.log";
+          service = "mastiff";
+          source = "caddy";
+        };
+      };
+    };
+  };
+  users.users.datadog.extraGroups = ["systemd-journal"];
+
   mastiff.services.api.enable = true;
 
   networking.firewall = {

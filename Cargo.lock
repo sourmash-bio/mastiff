@@ -1012,7 +1012,7 @@ dependencies = [
  "needletail",
  "niffler",
  "reqwest",
- "sourmash 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sourmash",
 ]
 
 [[package]]
@@ -1022,7 +1022,7 @@ dependencies = [
  "axum",
  "clap",
  "serde_json",
- "sourmash 0.11.0 (git+https://github.com/sourmash-bio/sourmash?branch=lirber/mastiff)",
+ "sourmash",
  "tokio",
  "tower",
  "tower-http",
@@ -1807,37 +1807,8 @@ checksum = "9f1341053f34bb13b5e9590afb7d94b48b48d4b87467ec28e3c238693bb553de"
 
 [[package]]
 name = "sourmash"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a7b102e46a4e1655ba1ac4bab601f05c3931dedd8bce4f2d5dbdc1f05efabcb4"
-dependencies = [
- "az",
- "backtrace",
- "bytecount",
- "byteorder",
- "cfg-if",
- "fixedbitset",
- "getset",
- "log",
- "md5",
- "murmurhash3",
- "niffler",
- "nohash-hasher",
- "num-iter",
- "once_cell",
- "primal-check",
- "serde",
- "serde_json",
- "thiserror",
- "typed-builder 0.9.1",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "sourmash"
-version = "0.11.0"
-source = "git+https://github.com/sourmash-bio/sourmash?branch=lirber/mastiff#1d98b79474e35edafb766fd1b7942db2e66e2c1c"
+version = "0.12.0"
+source = "git+https://github.com/sourmash-bio/sourmash?branch=lirber/mastiff#4dc51b7b1817c4460924ac608d29556599091d5a"
 dependencies = [
  "az",
  "bytecount",
@@ -1865,7 +1836,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "twox-hash",
- "typed-builder 0.10.0",
+ "typed-builder",
  "vec-collections",
  "wasm-bindgen",
  "web-sys",
@@ -2154,6 +2125,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-serde"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc6b213177105856957181934e4920de57730fc69bf42c37ee5bb664d406d9e1"
+dependencies = [
+ "serde",
+ "tracing-core",
+]
+
+[[package]]
 name = "tracing-subscriber"
 version = "0.3.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2163,12 +2144,15 @@ dependencies = [
  "matchers",
  "once_cell",
  "regex",
+ "serde",
+ "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
  "tracing-log",
+ "tracing-serde",
 ]
 
 [[package]]
@@ -2196,17 +2180,6 @@ dependencies = [
  "cfg-if",
  "rand",
  "static_assertions",
-]
-
-[[package]]
-name = "typed-builder"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a46ee5bd706ff79131be9c94e7edcb82b703c487766a114434e5790361cf08c5"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
 ]
 
 [[package]]

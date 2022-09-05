@@ -4,8 +4,9 @@ use clap::Parser;
 use color_eyre::{eyre::Result, eyre::WrapErr};
 use log::info;
 use needletail::{parse_fastx_file, parse_fastx_stdin, Sequence};
+
 use sourmash::encodings::HashFunctions;
-use sourmash::index::storage::ToWriter;
+use sourmash::prelude::*;
 use sourmash::signature::Signature;
 use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHashBTree};
 use sourmash::sketch::Sketch;
@@ -104,7 +105,20 @@ fn main() -> Result<()> {
             Some(HashFunctions::murmur64_DNA),
             Some(1000),
         )?;
-        (sigs.swap_remove(0), sequences.to_string_lossy().to_string())
+
+        let mut sig = sigs.swap_remove(0);
+        // remove abundance
+        let count = sig
+            .iter_mut()
+            .map(|s| {
+                if let Sketch::MinHash(mh) = s {
+                    mh.disable_abundance()
+                }
+            })
+            .count();
+        debug_assert_eq!(count, 1);
+
+        (sig, sequences.to_string_lossy().to_string())
     };
 
     let output: Box<dyn std::io::Write> = match output {
