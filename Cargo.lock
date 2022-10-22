@@ -1024,7 +1024,7 @@ dependencies = [
  "needletail",
  "niffler",
  "reqwest",
- "sourmash 0.12.0 (git+https://github.com/sourmash-bio/sourmash?branch=lirber/mastiff)",
+ "sourmash",
 ]
 
 [[package]]
@@ -1034,7 +1034,7 @@ dependencies = [
  "axum",
  "clap",
  "serde_json",
- "sourmash 0.12.0 (git+https://github.com/sourmash-bio/sourmash?tag=mastiff_roaring)",
+ "sourmash",
  "tokio",
  "tower",
  "tower-http",
@@ -1859,48 +1859,6 @@ checksum = "9f1341053f34bb13b5e9590afb7d94b48b48d4b87467ec28e3c238693bb553de"
 name = "sourmash"
 version = "0.12.0"
 source = "git+https://github.com/sourmash-bio/sourmash?tag=mastiff_roaring#2819307a768469ed8d6bd15f8e17889edfcf81b6"
-dependencies = [
- "az",
- "bytecount",
- "byteorder",
- "cfg-if",
- "counter",
- "csv",
- "fixedbitset",
- "flume",
- "getset",
- "histogram",
- "log",
- "md5",
- "memmap2",
- "murmurhash3",
- "niffler",
- "nohash-hasher",
- "num-iter",
- "numsep",
- "once_cell",
- "ouroboros",
- "piz",
- "primal-check",
- "rayon",
- "rkyv",
- "roaring",
- "rocksdb",
- "serde",
- "serde_json",
- "size",
- "thiserror",
- "twox-hash",
- "typed-builder",
- "vec-collections",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "sourmash"
-version = "0.12.0"
-source = "git+https://github.com/sourmash-bio/sourmash?branch=lirber/mastiff#2819307a768469ed8d6bd15f8e17889edfcf81b6"
 dependencies = [
  "az",
  "bytecount",

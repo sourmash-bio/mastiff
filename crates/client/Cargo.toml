@@ -14,7 +14,7 @@ log = "0.4.17"
 needletail = "0.4.1"
 niffler = { version = "2.4.0", default-features = false, features = [ "gz" ]}
 reqwest = { version = "0.11.11", default-features = false, features = [ "blocking", "rustls-tls" ] }
-sourmash = { git = "https://github.com/sourmash-bio/sourmash", branch = "lirber/mastiff" }
+sourmash = { git = "https://github.com/sourmash-bio/sourmash", tag = "mastiff_roaring" }
 
 [target.'cfg(target_env = "musl")'.dependencies.jemallocator]
 version = "0.5.0"

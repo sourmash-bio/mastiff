@@ -58,7 +58,6 @@
           ./configuration.nix
         ];
       };
-      */
     };
 
     # This is the application we actually want to run
