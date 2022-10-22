@@ -29,7 +29,7 @@
               let pkg = mastiff.packages.${pkgs.system}.default;
               in {
                 Restart = "on-failure";
-                ExecStart = "${pkg}/bin/mastiff -k21 /scratch";
+                ExecStart = "${pkg}/bin/mastiff-server -k21 /scratch";
                 DynamicUser = "yes";
                 RuntimeDirectory = "mastiff.api";
                 RuntimeDirectoryMode = "0755";
@@ -42,12 +42,23 @@
         };
       };
 
-    nixosConfigurations.mastiff-sourmash-bio = nixpkgs.lib.nixosSystem {
-      system = "x86_64-linux";
-      modules = [
-        self.nixosModule
-        ./configuration.nix
-      ];
+    nixosConfigurations = {
+      mastiff-sourmash-bio_arm = nixpkgs.lib.nixosSystem {
+        system = "aarch64-linux";
+        modules = [
+          self.nixosModule
+          ./configuration-aarch64.nix
+        ];
+      };
+
+      mastiff-sourmash-bio = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        modules = [
+          self.nixosModule
+          ./configuration.nix
+        ];
+      };
+      */
     };
 
     # This is the application we actually want to run
@@ -64,11 +75,6 @@
             deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.mastiff-sourmash-bio;
           user = "root";
         };
-        #hello = {
-        #  sshUser = "hello";
-        #  path = deploy-rs.lib.x86_64-linux.activate.custom self.defaultPackage.x86_64-linux "./bin/activate";
-        #  user = "hello";
-        #};
       };
     };
 
