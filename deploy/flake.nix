@@ -43,7 +43,7 @@
       };
 
     nixosConfigurations = {
-      mastiff-sourmash-bio_arm = nixpkgs.lib.nixosSystem {
+      mastiff-sourmash-bio = nixpkgs.lib.nixosSystem {
         system = "aarch64-linux";
         modules = [
           self.nixosModule
@@ -51,7 +51,7 @@
         ];
       };
 
-      mastiff-sourmash-bio = nixpkgs.lib.nixosSystem {
+      mastiff-sourmash-bio_x86 = nixpkgs.lib.nixosSystem {
         system = "x86_64-linux";
         modules = [
           self.nixosModule
@@ -71,7 +71,7 @@
         system = {
           sshUser = "root";
           path =
-            deploy-rs.lib.x86_64-linux.activate.nixos self.nixosConfigurations.mastiff-sourmash-bio;
+            deploy-rs.lib.aarch64-linux.activate.nixos self.nixosConfigurations.mastiff-sourmash-bio;
           user = "root";
         };
       };

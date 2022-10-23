@@ -16,6 +16,15 @@
     extraOptions = ''
       experimental-features = nix-command flakes
     '';
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 30d";
+    };
+    extraOptions = ''
+      min-free = ${toString (100 * 1024 * 1024)}
+      max-free = ${toString (1024 * 1024 * 1024)}
+    '';
   };
 
   environment = {
@@ -37,7 +46,7 @@
   };
 
   services.datadog-agent = {
-    enable = false;
+    enable = true;
     enableLiveProcessCollection = true;
     enableTraceAgent = true;
     tags = [ "mastiff" ];
@@ -61,7 +70,12 @@
       };
     };
   };
-  users.users.datadog.extraGroups = ["systemd-journal"];
+  users.users.datadog = {
+    group = "datadog";
+    extraGroups = ["systemd-journal"];
+    isSystemUser = true;
+  };
+  users.groups.datadog = {};
 
   mastiff.services.api.enable = true;
 
