@@ -142,7 +142,9 @@ fn main() -> Result<()> {
     }
 
     info!("Sending request to https://mastiff.sourmash.bio");
-    let client = reqwest::blocking::Client::new();
+    let client = reqwest::blocking::Client::builder()
+        .timeout(std::time::Duration::from_secs(3600))
+        .build()?;
     let res = client
         .post("https://mastiff.sourmash.bio/search")
         .body(sig_data)
