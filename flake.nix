@@ -63,7 +63,6 @@
           # Additional arguments specific to this derivation can be added here.
           # Be warned that using `//` will not do a deep copy of nested
           # structures
-          pname = "mastiff-deps";
         });
 
         # Run clippy (and deny all warnings) on the crate source,
@@ -135,6 +134,9 @@
               nixpkgs-fmt
               asciinema
               asciinema-agg
+
+              cargo-udeps
+              cargo-outdated
           ];
         });
       });

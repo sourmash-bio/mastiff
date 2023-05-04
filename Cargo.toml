@@ -1,7 +1,10 @@
 [workspace]
 members = ["crates/server", "crates/client"]
-
 default-members = ["crates/server"]
+
+[workspace.package]
+version = "0.1.0"
+name = "mastiff"
 
 [workspace.dependencies]
 clap = { version = "3.2.8", features = [ "derive" ] }
