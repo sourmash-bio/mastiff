@@ -134,6 +134,7 @@
               terraform
               nixpkgs-fmt
               asciinema
+              asciinema-agg
           ];
         });
       });

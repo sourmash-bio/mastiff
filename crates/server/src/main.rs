@@ -9,6 +9,8 @@ use axum::{
     routing::{get_service, post},
     Router,
 };
+use sentry::integrations::tower::{NewSentryLayer, SentryHttpLayer};
+use sentry::integrations::tracing as sentry_tracing;
 use tower::{BoxError, ServiceBuilder};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -54,11 +56,23 @@ struct Cli {
 
 #[tokio::main]
 async fn main() {
+    let _guard = sentry::init((
+        std::env::var("SENTRY_DSN").expect("$SENTRY_DSN must be set"),
+        sentry::ClientOptions {
+            release: sentry::release_name!(),
+            traces_sample_rate: 1.0,
+            enable_profiling: true,
+            profiles_sample_rate: 1.0,
+            ..Default::default()
+        },
+    ));
+
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::new(
             std::env::var("RUST_LOG").unwrap_or_else(|_| "mastiff=debug,tower_http=debug".into()),
         ))
         .with(tracing_subscriber::fmt::layer().json())
+        .with(sentry_tracing::layer())
         .init();
 
     let opts = Cli::parse();
@@ -86,6 +100,8 @@ async fn main() {
         // Add middleware to all routes
         .layer(
             ServiceBuilder::new()
+                .layer(NewSentryLayer::new_from_top())
+                .layer(SentryHttpLayer::with_transaction())
                 // Handle errors from middleware
                 .layer(HandleErrorLayer::new(handle_error))
                 .load_shed()
