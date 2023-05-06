@@ -63,6 +63,7 @@
           # Additional arguments specific to this derivation can be added here.
           # Be warned that using `//` will not do a deep copy of nested
           # structures
+          version = "dev";
         });
 
         # Run clippy (and deny all warnings) on the crate source,
@@ -100,24 +101,36 @@
 
         # Build the actual crate itself, reusing the dependency
         # artifacts from above.
-        mastiff = craneLib.buildPackage (commonArgs // {
+        mastiff-server = craneLib.buildPackage (commonArgs // {
           inherit cargoArtifacts;
           src = ./.;
           pname = "mastiff-server";
           cargoExtraArgs = "--bin mastiff-server";
         });
+
+        # Build the actual crate itself, reusing the dependency
+        # artifacts from above.
+        mastiff-client = craneLib.buildPackage (commonArgs // {
+          inherit cargoArtifacts;
+          src = ./.;
+          pname = "mastiff-client";
+          cargoExtraArgs = "-p mastiff-client --bin mastiff-client";
+        });
       in
       {
-        packages.default = mastiff;
+        packages.default = mastiff-server;
+        packages.mastiff-server = mastiff-server;
+        packages.mastiff-client = mastiff-client;
 
         apps.default = flake-utils.lib.mkApp {
-          drv = mastiff;
+          drv = mastiff-server;
         };
 
         checks = {
          inherit
            # Build the crate as part of `nix flake check` for convenience
-           mastiff
+           mastiff-server
+           mastiff-client
            mastiffFmt
            mastiffClippy
            mastiffNextest;
