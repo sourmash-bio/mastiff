@@ -48,6 +48,8 @@
           buildInputs = with pkgs; [
             llvmPackages_13.libclang
             llvmPackages_13.libcxxClang
+          ] ++ lib.optionals stdenv.isDarwin [
+            darwin.apple_sdk.frameworks.Security
           ];
 
           # Extra inputs can be added here
