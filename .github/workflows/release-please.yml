@@ -20,6 +20,7 @@ jobs:
         with:
           command: manifest
           release-type: rust
+          package-name: mastiff-client
 
       - uses: actions/checkout@v2
         if: ${{ steps.release.outputs.release_created }}
