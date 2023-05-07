@@ -18,8 +18,8 @@ jobs:
       - uses: GoogleCloudPlatform/release-please-action@v2
         id: release
         with:
+          command: manifest
           release-type: rust
-          package-name: mastiff-client
 
       - uses: actions/checkout@v2
         if: ${{ steps.release.outputs.release_created }}
