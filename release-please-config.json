@@ -1,4 +1,5 @@
 {
+  "bootstrap-sha": "bbfef0d7674e429391527e54256ec1993129b1b1",
   "packages": {
     ".": {
       "changelog-path": "CHANGELOG.md",
@@ -7,8 +8,7 @@
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true,
       "draft": false,
-      "prerelease": false,
-      "bootstrap-sha": "bbfef0d7674e429391527e54256ec1993129b1b1"
+      "prerelease": false
     }
   },
   "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
