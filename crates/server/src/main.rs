@@ -1,11 +1,11 @@
 use std::{borrow::Cow, net::SocketAddr, path::PathBuf, sync::Arc, time::Duration};
 
 use axum::{
-    body::Bytes,
+    body::{BoxBody, Bytes},
     error_handling::HandleErrorLayer,
     extract::{ContentLengthLimit, Extension},
-    http::StatusCode,
-    response::IntoResponse,
+    http::{header, StatusCode},
+    response::{IntoResponse, Response},
     routing::{get_service, post},
     Router,
 };
@@ -63,6 +63,11 @@ async fn main() {
             traces_sample_rate: 1.0,
             enable_profiling: true,
             profiles_sample_rate: 1.0,
+            environment: Some(
+                std::env::var("MASTIFF_ENVIRONMENT")
+                    .unwrap_or("development".into())
+                    .into(),
+            ),
             ..Default::default()
         },
     ));
@@ -135,16 +140,18 @@ impl State {
         let threshold = self.threshold;
         let template = self.template.clone();
 
-        let (matches, query_size) = tokio::task::spawn_blocking(move || {
+        let Ok((matches, query_size)) = tokio::task::spawn_blocking(move || {
             if let Some(Sketch::MinHash(mh)) = query.select_sketch(&template) {
                 let counter = db.counter_for_query(mh);
                 let matches = db.matches_from_counter(counter, threshold);
-                (matches, mh.size() as f64)
+                Ok((matches, mh.size() as f64))
             } else {
-                todo!()
+                Err("Could not extract compatible sketch to compare")
             }
         })
-        .await?;
+        .await? else {
+            return Err("Could not extract compatible sketch to compare".into())
+        };
 
         let mut csv = vec!["SRA accession,containment".into()];
         csv.extend(matches.into_iter().map(|(path, size)| {
@@ -157,22 +164,52 @@ impl State {
         }));
         Ok(csv)
     }
+
+    fn parse_sig(&self, raw_data: &[u8]) -> Result<Signature, BoxError> {
+        let sig = Signature::from_reader(raw_data)?.swap_remove(0);
+        if sig.select_sketch(&self.template).is_none() {
+            Err(format!(
+                "Could not extract compatible sketch to compare. Expected k={}",
+                &self.template.ksize(),
+            )
+            .into())
+        } else {
+            Ok(sig)
+        }
+    }
 }
 
 async fn search(
     ContentLengthLimit(bytes): ContentLengthLimit<Bytes, { 1024 * 5_000 }>, // ~5mb
     Extension(state): Extension<SharedState>,
     //) -> Result<Json<serde_json::Value>, StatusCode> {
-) -> Result<String, StatusCode> {
-    let sig = parse_sig(&bytes).unwrap();
-    let matches = state.search(sig).await.unwrap();
+) -> Response<BoxBody> {
+    let sig = match state.parse_sig(&bytes) {
+        Ok(sig) => sig,
+        Err(e) => {
+            return {
+                (
+                    StatusCode::BAD_REQUEST,
+                    format!("Error parsing signature: {e}"),
+                )
+                    .into_response()
+            }
+        }
+    };
 
-    Ok(matches.join("\n"))
-}
-
-fn parse_sig(raw_data: &[u8]) -> Result<Signature, BoxError> {
-    let sig = Signature::from_reader(raw_data)?.swap_remove(0);
-    Ok(sig)
+    match state.search(sig).await {
+        Ok(matches) => (
+            StatusCode::OK,
+            [(header::CONTENT_TYPE, "text/plain; charset=utf-8")],
+            matches.join("\n"),
+        )
+            .into_response(),
+        Err(e) => (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("Something went wrong: {e}"),
+        )
+            .into_response(),
+    }
 }
 
 async fn handle_static_serve_error(error: std::io::Error) -> impl IntoResponse {

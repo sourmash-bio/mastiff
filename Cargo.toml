@@ -29,4 +29,5 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt", "json"] }
 
 [profile.release]
-debug = true
+debug = 1
+#lto = true # Enable link-time optimization
