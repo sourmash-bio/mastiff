@@ -49,6 +49,10 @@ struct Cli {
     #[clap(parse(from_os_str), short, long)]
     output: Option<PathBuf>,
 
+    /// Server to query. Default: https://mastiff.sourmash.bio
+    #[clap(short, long, default_value = "https://mastiff.sourmash.bio")]
+    server: String,
+
     /// Input file is already a signature
     #[clap(long = "sig")]
     is_sig: bool,
@@ -62,6 +66,7 @@ fn main() -> Result<()> {
         sequences,
         output,
         is_sig,
+        server,
     } = Cli::parse();
 
     info!("Preparing signature");
@@ -141,12 +146,12 @@ fn main() -> Result<()> {
             .wrap_err_with(|| "Error preparing signature")?;
     }
 
-    info!("Sending request to https://mastiff.sourmash.bio");
+    info!("Sending request to {}", server);
     let client = reqwest::blocking::Client::builder()
         .timeout(std::time::Duration::from_secs(3600))
         .build()?;
     let res = client
-        .post("https://mastiff.sourmash.bio/search")
+        .post(format!("{}/search", server))
         .body(sig_data)
         .send()?;
 
