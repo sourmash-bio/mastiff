@@ -77,6 +77,21 @@
   };
   users.groups.datadog = {};
 
+  ####
+
+  virtualisation.docker.enable = true;
+
+  users.users.tessa = {
+    group = "mastiff";
+    extraGroups = ["docker"];
+    isNormalUser = true;
+    openssh.authorizedKeys.keys = [
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINcXQ/w5JZ8uYK7r7d1tRwqEibDlx6Tud2LWelwjXwdr ntpierce@gmail.com"
+    ];
+    packages = with pkgs; [ docker-compose ];
+  };
+  users.groups.mastiff = {};
+
   mastiff.services.api.enable = true;
 
   networking.firewall = {
