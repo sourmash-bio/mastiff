@@ -11,11 +11,13 @@ use axum::{
 };
 use sentry::integrations::tower::{NewSentryLayer, SentryHttpLayer};
 use sentry::integrations::tracing as sentry_tracing;
+use tokio::runtime::Runtime;
 use tower::{BoxError, ServiceBuilder};
 use tower_http::{services::ServeDir, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use clap::Parser;
+use color_eyre::eyre::Result;
 use sourmash::index::revindex::RevIndex;
 use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
@@ -54,8 +56,7 @@ struct Cli {
     threshold_bp: usize,
 }
 
-#[tokio::main]
-async fn main() {
+fn main() -> Result<()> {
     let _guard = sentry::init((
         std::env::var("SENTRY_DSN").expect("$SENTRY_DSN must be set"),
         sentry::ClientOptions {
@@ -117,13 +118,22 @@ async fn main() {
                 .into_inner(),
         );
 
-    // Run our app with hyper
+    // Create the runtime
+    let rt = Runtime::new()?;
+
     let addr = SocketAddr::from(([127, 0, 0, 1], opts.port));
     tracing::debug!("listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+
+    // Spawn the root task
+    rt.block_on(async {
+        // Run our app with hyper
+        axum::Server::bind(&addr)
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+    });
+
+    Ok(())
 }
 
 type SharedState = Arc<State>;
