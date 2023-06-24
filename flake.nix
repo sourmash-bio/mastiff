@@ -155,6 +155,9 @@
 
               cargo-udeps
               cargo-outdated
+
+              snakemake
+              parallel-full
           ];
         });
       });
