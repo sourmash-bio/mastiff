@@ -1302,6 +1302,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "mastiff-index"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "env_logger",
+ "histogram",
+ "log",
+ "numsep",
+ "size",
+ "sourmash",
+]
+
+[[package]]
 name = "mastiff-server"
 version = "0.1.0"
 dependencies = [
