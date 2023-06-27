@@ -1,11 +1,17 @@
 EXEC="cargo run -p mastiff-index --release -- "
 
+rule all:
+    input: "outputs/bacteria-1k"
+
 rule bacteria_1k:
     output: directory("outputs/bacteria-1k")
+    input: "inputs/gtdb-rs207.genomic-reps.dna.k21.manifest",
+    threads: 24
     shell: """
-        {EXEC} index -k 51 -s 1000 \
+        export RAYON_NUM_THREADS={threads}
+        RUST_LOG=debug {EXEC} index -k 21 -s 1000 \
           --output {output} \
-          <(head -1000 flist)
+          <(head -1000 {input})
     """
 
 rule bacteria_1k_save_paths:
