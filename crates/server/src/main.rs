@@ -18,7 +18,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use clap::Parser;
 use color_eyre::eyre::Result;
-use sourmash::index::revindex::RevIndex;
+use sourmash::index::revindex::{RevIndex, RevIndexOps};
 use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
 use sourmash::sketch::Sketch;
@@ -159,8 +159,9 @@ impl State {
                 Err("Could not extract compatible sketch to compare")
             }
         })
-        .await? else {
-            return Err("Could not extract compatible sketch to compare".into())
+        .await?
+        else {
+            return Err("Could not extract compatible sketch to compare".into());
         };
 
         let mut csv = vec!["SRA accession,containment".into()];

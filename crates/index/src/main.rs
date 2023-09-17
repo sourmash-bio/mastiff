@@ -1,27 +1,18 @@
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::path::{Path, PathBuf};
 
+use camino::Utf8Path as Path;
+use camino::Utf8PathBuf as PathBuf;
 use clap::{Parser, Subcommand};
 use log::info;
 
-use sourmash::index::revindex::{prepare_query, RevIndex};
+use sourmash::collection::Collection;
+use sourmash::index::revindex::{prepare_query, RevIndex, RevIndexOps};
+use sourmash::prelude::*;
 use sourmash::signature::{Signature, SigsTrait};
-use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
-use sourmash::sketch::Sketch;
-
-fn build_template(ksize: u8, scaled: usize) -> Sketch {
-    let max_hash = max_hash_for_scaled(scaled as u64);
-    let template_mh = KmerMinHash::builder()
-        .num(0u32)
-        .ksize(ksize as u32)
-        .max_hash(max_hash)
-        .build();
-    Sketch::MinHash(template_mh)
-}
 
 fn read_paths<P: AsRef<Path>>(paths_file: P) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
-    let paths = BufReader::new(File::open(paths_file)?);
+    let paths = BufReader::new(File::open(paths_file.as_ref())?);
     Ok(paths
         .lines()
         .map(|line| {
@@ -43,27 +34,18 @@ struct Cli {
 enum Commands {
     Index {
         /// List of signatures to search
-        #[clap(parse(from_os_str))]
         siglist: PathBuf,
 
         /// ksize
         #[clap(short, long, default_value = "31")]
         ksize: u8,
 
-        /// threshold
-        #[clap(short, long, default_value = "0")]
-        threshold: f64,
-
         /// scaled
         #[clap(short, long, default_value = "1000")]
         scaled: usize,
 
-        /// save paths to signatures into index. Default: save full sig into index
-        #[clap(long)]
-        save_paths: bool,
-
         /// The path for output
-        #[clap(parse(from_os_str), short, long)]
+        #[clap(short, long)]
         output: PathBuf,
 
         /// Index using colors
@@ -72,32 +54,19 @@ enum Commands {
     },
     Update {
         /// List of signatures to search
-        #[clap(parse(from_os_str))]
         siglist: PathBuf,
 
         /// ksize
         #[clap(short, long, default_value = "31")]
         ksize: u8,
 
-        /// threshold
-        #[clap(short, long, default_value = "0")]
-        threshold: f64,
-
         /// scaled
         #[clap(short, long, default_value = "1000")]
         scaled: usize,
 
-        /// save paths to signatures into index. Default: save full sig into index
-        #[clap(long)]
-        save_paths: bool,
-
         /// The path for output
-        #[clap(parse(from_os_str), short, long)]
+        #[clap(short, long)]
         output: PathBuf,
-
-        /// Index using colors
-        #[clap(long = "colors")]
-        colors: bool,
     },
     /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
         Repair {
@@ -112,7 +81,6 @@ enum Commands {
     */
     Check {
         /// The path for output
-        #[clap(parse(from_os_str))]
         output: PathBuf,
 
         /// avoid deserializing data, and without stats
@@ -121,20 +89,16 @@ enum Commands {
     },
     Convert {
         /// The path for the input DB
-        #[clap(parse(from_os_str))]
         input: PathBuf,
 
         /// The path for the output DB
-        #[clap(parse(from_os_str))]
         output: PathBuf,
     },
     Search {
         /// Query signature
-        #[clap(parse(from_os_str))]
         query_path: PathBuf,
 
         /// Path to rocksdb index dir
-        #[clap(parse(from_os_str))]
         index: PathBuf,
 
         /// ksize
@@ -154,16 +118,14 @@ enum Commands {
         containment: f64,
 
         /// The path for output
-        #[clap(parse(from_os_str), short = 'o', long = "output")]
+        #[clap(short = 'o', long = "output")]
         output: Option<PathBuf>,
     },
     Gather {
         /// Query signature
-        #[clap(parse(from_os_str))]
         query_path: PathBuf,
 
         /// Path to rocksdb index dir
-        #[clap(parse(from_os_str))]
         index: PathBuf,
 
         /// ksize
@@ -179,7 +141,7 @@ enum Commands {
         threshold_bp: usize,
 
         /// The path for output
-        #[clap(parse(from_os_str), short = 'o', long = "output")]
+        #[clap(short = 'o', long = "output")]
         output: Option<PathBuf>,
     },
 }
@@ -187,23 +149,23 @@ enum Commands {
 fn gather<P: AsRef<Path>>(
     queries_file: P,
     index: P,
-    template: Sketch,
+    selection: Selection,
     threshold_bp: usize,
     _output: Option<P>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let query_sig = Signature::from_path(queries_file)?;
+    let query_sig = Signature::from_path(queries_file.as_ref())?
+        .swap_remove(0)
+        .select(&selection)?;
 
     let mut query = None;
-    for sig in &query_sig {
-        if let Some(q) = prepare_query(sig, &template) {
-            query = Some(q);
-        }
+    if let Some(q) = prepare_query(query_sig, &selection) {
+        query = Some(q);
     }
     let query = query.expect("Couldn't find a compatible MinHash");
 
     let threshold = threshold_bp / query.scaled() as usize;
 
-    let db = RevIndex::open(index.as_ref(), true);
+    let db = RevIndex::open(index.as_ref(), true)?;
     info!("Loaded DB");
 
     info!("Building counter");
@@ -217,7 +179,7 @@ fn gather<P: AsRef<Path>>(
         hash_to_color,
         threshold,
         &query,
-        &template,
+        Some(selection),
     )?;
 
     info!("matches: {}", matches.len());
@@ -236,25 +198,25 @@ fn gather<P: AsRef<Path>>(
 fn search<P: AsRef<Path>>(
     queries_file: P,
     index: P,
-    template: Sketch,
+    selection: Selection,
     threshold_bp: usize,
     minimum_containment: f64,
     _output: Option<P>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let query_sig = Signature::from_path(queries_file)?;
+    let query_sig = Signature::from_path(queries_file.as_ref())?
+        .swap_remove(0)
+        .select(&selection)?;
 
     let mut query = None;
-    for sig in &query_sig {
-        if let Some(q) = prepare_query(sig, &template) {
-            query = Some(q);
-        }
+    if let Some(q) = prepare_query(query_sig, &selection) {
+        query = Some(q);
     }
     let query = query.expect("Couldn't find a compatible MinHash");
     let query_size = query.size() as f64;
 
     let threshold = threshold_bp / query.scaled() as usize;
 
-    let db = RevIndex::open(index.as_ref(), true);
+    let db = RevIndex::open(index.as_ref(), true)?;
     info!("Loaded DB");
 
     info!("Building counter");
@@ -287,41 +249,40 @@ fn search<P: AsRef<Path>>(
 
 fn index<P: AsRef<Path>>(
     siglist: P,
-    template: Sketch,
-    threshold: f64,
+    selection: Selection,
     output: P,
-    save_paths: bool,
     colors: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Loading siglist");
     let index_sigs = read_paths(siglist)?;
     info!("Loaded {} sig paths in siglist", index_sigs.len());
 
-    let db = RevIndex::create(output.as_ref(), colors);
-    db.index(index_sigs, &template, threshold, save_paths);
+    let collection = Collection::from_paths(&index_sigs)?.select(&selection)?;
+    RevIndex::create(output.as_ref(), collection.try_into()?, colors)?;
 
     Ok(())
 }
 
 fn update<P: AsRef<Path>>(
     siglist: P,
-    template: Sketch,
-    threshold: f64,
+    selection: Selection,
     output: P,
-    save_paths: bool,
-    _colors: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     info!("Loading siglist");
     let index_sigs = read_paths(siglist)?;
     info!("Loaded {} sig paths in siglist", index_sigs.len());
 
-    let db = RevIndex::open(output.as_ref(), false);
-    db.update(index_sigs, &template, threshold, save_paths);
+    let collection = Collection::from_paths(&index_sigs)?.select(&selection)?;
+
+    let db = RevIndex::open(output.as_ref(), false)?;
+    db.update(collection.try_into()?)?;
 
     Ok(())
 }
 
-fn convert<P: AsRef<Path>>(input: P, output: P) -> Result<(), Box<dyn std::error::Error>> {
+fn convert<P: AsRef<Path>>(_input: P, _output: P) -> Result<(), Box<dyn std::error::Error>> {
+    todo!()
+    /*
     info!("Opening input DB");
     let db = RevIndex::open(input.as_ref(), true);
 
@@ -333,11 +294,12 @@ fn convert<P: AsRef<Path>>(input: P, output: P) -> Result<(), Box<dyn std::error
 
     info!("Finished conversion");
     Ok(())
+    */
 }
 
 fn check<P: AsRef<Path>>(output: P, quick: bool) -> Result<(), Box<dyn std::error::Error>> {
     info!("Opening DB");
-    let db = RevIndex::open(output.as_ref(), true);
+    let db = RevIndex::open(output.as_ref(), true)?;
 
     info!("Starting check");
     db.check(quick);
@@ -364,28 +326,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Index {
             output,
             siglist,
-            threshold,
             ksize,
             scaled,
-            save_paths,
             colors,
         } => {
-            let template = build_template(ksize, scaled);
+            let selection = Selection::builder()
+                .ksize(ksize.into())
+                .scaled(scaled as u32)
+                .build();
 
-            index(siglist, template, threshold, output, save_paths, colors)?
+            index(siglist, selection, output, colors)?
         }
         Update {
             output,
             siglist,
-            threshold,
             ksize,
             scaled,
-            save_paths,
-            colors,
         } => {
-            let template = build_template(ksize, scaled);
+            let selection = Selection::builder()
+                .ksize(ksize.into())
+                .scaled(scaled as u32)
+                .build();
 
-            update(siglist, template, threshold, output, save_paths, colors)?
+            update(siglist, selection, output)?
         }
         Check { output, quick } => check(output, quick)?,
         Convert { input, output } => convert(input, output)?,
@@ -398,12 +361,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             scaled,
             containment,
         } => {
-            let template = build_template(ksize, scaled);
+            let selection = Selection::builder()
+                .ksize(ksize.into())
+                .scaled(scaled as u32)
+                .build();
 
             search(
                 query_path,
                 index,
-                template,
+                selection,
                 threshold_bp,
                 containment,
                 output,
@@ -417,9 +383,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ksize,
             scaled,
         } => {
-            let template = build_template(ksize, scaled);
+            let selection = Selection::builder()
+                .ksize(ksize.into())
+                .scaled(scaled as u32)
+                .build();
 
-            gather(query_path, index, template, threshold_bp, output)?
+            gather(query_path, index, selection, threshold_bp, output)?
         } /* TODO: need the repair_cf variant, not available in rocksdb-rust yet
                   Repair { index, colors } => repair(index, colors),
           */

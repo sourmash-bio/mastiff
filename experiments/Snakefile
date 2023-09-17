@@ -14,25 +14,16 @@ rule bacteria_1k:
           <(head -1000 {input})
     """
 
-rule bacteria_1k_save_paths:
-    output: directory("outputs/bacteria-1k-save-paths")
-    shell: """
-        {EXEC} index -k 51 -s 1000 \
-          --output {output} \
-          --save-paths \
-          <(head -1000 flist)
-    """
-
 rule bacteria_2k:
     output: directory("outputs/bacteria-2k")
     input: 
-        previous=directory("outputs/bacteria-1k-save-paths"),
+        previous="outputs/bacteria-1k",
+        manifest="inputs/gtdb-rs207.genomic-reps.dna.k21.manifest",
     shell: """
         cp -a {input.previous} {output}
-        {EXEC} update -k 51 -s 1000 \
+        {EXEC} update -k 21 -s 1000 \
           --output {output} \
-          --save-paths \
-          <(head -2000 flist)
+          <(head -2000 {input.manifest})
     """
 
 rule bacteria_1k_colors:

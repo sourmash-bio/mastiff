@@ -1,12 +1,14 @@
 [workspace]
 members = ["crates/*"]
 default-members = ["crates/server"]
+resolver = "2"
 
 [workspace.package]
 version = "0.1.0"
 name = "mastiff"
 
 [workspace.dependencies]
+camino = "1.1.6"
 clap = { version = "3.2.8", features = [ "derive" ] }
 color-eyre = "0.6.2"
 csv = "1.1.6"
@@ -18,7 +20,8 @@ niffler = { version = "2.4.0", default-features = false, features = [ "gz" ]}
 numsep = "0.1.12"
 reqwest = { version = "0.11.11", default-features = false, features = [ "blocking", "rustls-tls" ] }
 size = "0.4.0"
-sourmash = { git = "https://github.com/sourmash-bio/sourmash", tag = "mastiff_roaring" }
+#sourmash = { git = "https://github.com/sourmash-bio/sourmash", branch = "lirber/mastiff", features = ["branchwater"] }
+sourmash = { path = "../sm_worktrees/mastiff/src/core", features = ["branchwater"] }
 
 serde_json = "1.0.83"
 # axum deps

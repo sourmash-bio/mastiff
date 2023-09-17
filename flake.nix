@@ -155,6 +155,8 @@
 
               cargo-udeps
               cargo-outdated
+              cargo-watch
+              cargo-limit
 
               snakemake
               parallel-full
