@@ -1,6 +1,3 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-
 use camino::Utf8Path as Path;
 use camino::Utf8PathBuf as PathBuf;
 use clap::{Parser, Subcommand};
@@ -8,20 +5,10 @@ use log::info;
 
 use sourmash::collection::Collection;
 use sourmash::index::revindex::{prepare_query, RevIndex, RevIndexOps};
+use sourmash::manifest::Manifest;
 use sourmash::prelude::*;
 use sourmash::signature::{Signature, SigsTrait};
-
-fn read_paths<P: AsRef<Path>>(paths_file: P) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
-    let paths = BufReader::new(File::open(paths_file.as_ref())?);
-    Ok(paths
-        .lines()
-        .map(|line| {
-            let mut path = PathBuf::new();
-            path.push(line.unwrap());
-            path
-        })
-        .collect())
-}
+use sourmash::storage::{FSStorage, InnerStorage, ZipStorage};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -33,8 +20,13 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     Index {
-        /// List of signatures to search
-        siglist: PathBuf,
+        /// Location of the input data.
+        /// Either a zip file or a path to a directory containing signatures.
+        location: PathBuf,
+
+        /// Manifest for sigs to be loaded from storage
+        #[clap(short, long)]
+        manifest: Option<PathBuf>,
 
         /// ksize
         #[clap(short, long, default_value = "31")]
@@ -53,8 +45,13 @@ enum Commands {
         colors: bool,
     },
     Update {
-        /// List of signatures to search
-        siglist: PathBuf,
+        /// Location of the input data.
+        /// Either a zip file or a path to a directory containing signatures.
+        location: PathBuf,
+
+        /// Manifest for sigs to be loaded from storage
+        #[clap(short, long)]
+        manifest: Option<PathBuf>,
 
         /// ksize
         #[clap(short, long, default_value = "31")]
@@ -248,34 +245,75 @@ fn search<P: AsRef<Path>>(
 }
 
 fn index<P: AsRef<Path>>(
-    siglist: P,
+    location: P,
+    manifest: Option<P>,
     selection: Selection,
     output: P,
     colors: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Loading siglist");
-    let index_sigs = read_paths(siglist)?;
-    info!("Loaded {} sig paths in siglist", index_sigs.len());
+    let manifest = if let Some(m) = manifest {
+        let rdr = std::fs::OpenOptions::new().read(true).open(m.as_ref())?;
+        Some(Manifest::from_reader(rdr)?)
+    } else {
+        None
+    };
 
-    let collection = Collection::from_paths(&index_sigs)?.select(&selection)?;
-    RevIndex::create(output.as_ref(), collection.try_into()?, colors)?;
+    let collection = if matches!(location.as_ref().extension(), Some("zip")) {
+        if let Some(m) = manifest {
+            let storage = ZipStorage::from_file(location)?;
+            Collection::new(m, InnerStorage::new(storage))
+        } else {
+            Collection::from_zipfile(location)?
+        }
+    } else {
+        let manifest = manifest.ok_or_else(|| "Need a manifest")?;
+        let storage = FSStorage::builder()
+            .fullpath("".into())
+            .subdir("".into())
+            .build();
+        Collection::new(manifest, InnerStorage::new(storage))
+    };
+
+    RevIndex::create(
+        output.as_ref(),
+        collection.select(&selection)?.try_into()?,
+        colors,
+    )?;
 
     Ok(())
 }
 
 fn update<P: AsRef<Path>>(
-    siglist: P,
+    location: P,
+    manifest: Option<P>,
     selection: Selection,
     output: P,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    info!("Loading siglist");
-    let index_sigs = read_paths(siglist)?;
-    info!("Loaded {} sig paths in siglist", index_sigs.len());
+    let manifest = if let Some(m) = manifest {
+        let rdr = std::fs::OpenOptions::new().read(true).open(m.as_ref())?;
+        Some(Manifest::from_reader(rdr)?)
+    } else {
+        None
+    };
 
-    let collection = Collection::from_paths(&index_sigs)?.select(&selection)?;
+    let collection = if matches!(location.as_ref().extension(), Some("zip")) {
+        if let Some(m) = manifest {
+            let storage = ZipStorage::from_file(location)?;
+            Collection::new(m, InnerStorage::new(storage))
+        } else {
+            Collection::from_zipfile(location)?
+        }
+    } else {
+        let manifest = manifest.ok_or_else(|| "Need a manifest")?;
+        let storage = FSStorage::builder()
+            .fullpath("".into())
+            .subdir("".into())
+            .build();
+        Collection::new(manifest, InnerStorage::new(storage))
+    };
 
     let db = RevIndex::open(output.as_ref(), false)?;
-    db.update(collection.try_into()?)?;
+    db.update(collection.select(&selection)?.try_into()?)?;
 
     Ok(())
 }
@@ -325,7 +363,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     match opts.command {
         Index {
             output,
-            siglist,
+            location,
+            manifest,
             ksize,
             scaled,
             colors,
@@ -335,11 +374,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .scaled(scaled as u32)
                 .build();
 
-            index(siglist, selection, output, colors)?
+            index(location, manifest, selection, output, colors)?
         }
         Update {
             output,
-            siglist,
+            location,
+            manifest,
             ksize,
             scaled,
         } => {
@@ -348,7 +388,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .scaled(scaled as u32)
                 .build();
 
-            update(siglist, selection, output)?
+            update(location, manifest, selection, output)?
         }
         Check { output, quick } => check(output, quick)?,
         Convert { input, output } => convert(input, output)?,

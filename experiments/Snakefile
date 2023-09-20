@@ -1,73 +1,62 @@
 EXEC="cargo run -p mastiff-index --release -- "
 
 rule all:
-    input: "outputs/bacteria-1k"
+#    input: "outputs/rs207"
+    input: "outputs/rs207-2k"
 
-rule bacteria_1k:
-    output: directory("outputs/bacteria-1k")
-    input: "inputs/gtdb-rs207.genomic-reps.dna.k21.manifest",
+rule rs207_1k:
+    output: directory("outputs/rs207-1k")
+    input:
+      storage="inputs/gtdb-rs207.genomic-reps.dna.k21.zip",
+      manifest="inputs/gtdb-rs207.genomic-reps.dna.k21.manifest"
     threads: 24
     shell: """
         export RAYON_NUM_THREADS={threads}
-        RUST_LOG=debug {EXEC} index -k 21 -s 1000 \
+        RUST_LOG=info {EXEC} index -k 21 -s 1000 \
           --output {output} \
-          <(head -1000 {input})
+          --manifest <(head -1002 {input.manifest}) \
+          {input.storage}
     """
 
-rule bacteria_2k:
-    output: directory("outputs/bacteria-2k")
+rule rs207_2k:
+    output: directory("outputs/rs207-2k")
     input: 
-        previous="outputs/bacteria-1k",
+        previous="outputs/rs207-1k",
+        storage="inputs/gtdb-rs207.genomic-reps.dna.k21.zip",
         manifest="inputs/gtdb-rs207.genomic-reps.dna.k21.manifest",
+    threads: 24
     shell: """
+        export RAYON_NUM_THREADS={threads}
         cp -a {input.previous} {output}
         {EXEC} update -k 21 -s 1000 \
           --output {output} \
-          <(head -2000 {input.manifest})
+          --manifest <(head -2002 {input.manifest}) \
+          {input.storage}
     """
 
-rule bacteria_1k_colors:
-    output: directory("outputs/bacteria-1k-colors")
+rule rs_207:
+    output: directory("outputs/rs207")
+    input: "inputs/gtdb-rs207.genomic-reps.dna.k21.zip"
     shell: """
-        RUST_LOG=debug {EXEC} index -k 51 -s 1000 --colors \
-          --output {output} \
-          <(head -1000 flist)
+        {EXEC} index -k 21 -s 1000 \
+            --output {output} \
+            {input}
     """
 
-rule bacteria_10k:
-    output: directory("outputs/bacteria-10k")
+rule download_rs_207:
+    output: "inputs/gtdb-rs207.genomic-reps.dna.k21.zip"
     shell: """
-        {EXEC} index -k 51 -s 1000 \
-          --output {output} \
-          <(head -10000 flist)
+        curl -L https://osf.io/download/f2wzc/ -o {output}
     """
 
-rule bacteria_10k_colors:
-    output: directory("outputs/bacteria-10k-colors")
+rule extract_rs_207_manifest:
+    output: "inputs/gtdb-rs207.genomic-reps.dna.k21.manifest"
+    input: "inputs/gtdb-rs207.genomic-reps.dna.k21.zip"
     shell: """
-        {EXEC} index -k 51 -s 1000 --colors \
-          --output {output} \
-          <(head -10000 flist)
+        unzip -p {input} SOURMASH-MANIFEST.csv > {output}
     """
 
-rule bacteria_fullcolors:
-    output: directory("outputs/bacteria-fullcolors")
-    shell: """
-        {EXEC} index -k 51 -s 1000 --colors \
-          --output {output} \
-          <(head -1 flist | xargs yes | head -1000)
-    """
-
-rule bacteria_k51_s1000:
-    output: directory("outputs/bacteria-k51-s1000")
-    benchmark:
-        "benchmarks/bacteria-k51-s1000.tsv"
-    shell: """
-        {EXEC} index -k 51 -s 1000 \
-          --output {output} \
-          flist_bacteria-k51
-    """
-
+#######################################################################
 
 #rule metag_all:
 #    output: directory("/scratch/analysis/metag_k21_s{scaled,\d+}-roaring")
@@ -118,33 +107,6 @@ rule metag_1k_colors:
             --colors \
             --save-paths \
             <(head -1000 catalog_metagenomes)
-    """
-
-rule download_rs_207:
-    output: "inputs/gtdb-rs207.genomic-reps.dna.k21.zip"
-    shell: """
-        curl -L https://osf.io/download/f2wzc/ -o {output}
-    """
-
-rule extract_rs_207:
-    output: 
-        manifest="inputs/gtdb-rs207.genomic-reps.dna.k21.manifest",
-        data=directory("inputs/gtdb-rs207.genomic-reps.dna.k21")
-    input: "inputs/gtdb-rs207.genomic-reps.dna.k21.zip"
-    shell: """
-        python -m zipfile -e {input} {output.data}
-        find `realpath {output.data}` -iname "*.sig.gz" > {output.manifest}
-    """
-
-rule rs_207:
-    output: directory("outputs/rs207")
-    input: 
-      manifest="inputs/gtdb-rs207.genomic-reps.dna.k21.manifest",
-      data=directory("inputs/gtdb-rs207.genomic-reps.dna.k21")
-    shell: """
-        RUST_LOG=trace {EXEC} index -k 21 -s 1000 \
-            --output {output} \
-            {input.manifest}
     """
 
 rule new_catalog:
