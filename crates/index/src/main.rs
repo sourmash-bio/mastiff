@@ -410,11 +410,44 @@ fn manifest<P: AsRef<Path>>(
 }
 
 fn check<P: AsRef<Path>>(output: P, quick: bool) -> Result<(), Box<dyn std::error::Error>> {
+    use numsep::{separate, Locale};
+    use size::Size;
+
     info!("Opening DB");
     let db = RevIndex::open(output.as_ref(), true)?;
 
     info!("Starting check");
-    db.check(quick);
+    let stats = db.check(quick);
+
+    let kcount = *stats.kcount();
+    let vcount = *stats.vcount();
+    let vcounts = stats.vcounts();
+
+    //info!("*** {} ***", cf_name);
+    let ksize = Size::from_bytes(kcount);
+    let vsize = Size::from_bytes(vcount);
+    if !quick {
+        info!(
+            "total datasets: {}",
+            separate(stats.total_datasets(), Locale::English)
+        );
+    }
+    info!(
+        "total keys: {}",
+        separate(stats.kcount() / 8, Locale::English)
+    );
+
+    info!("k: {}", ksize.to_string());
+    info!("v: {}", vsize.to_string());
+
+    if !quick && kcount > 0 {
+        info!("max v: {}", vcounts.maximum().unwrap());
+        info!("mean v: {}", vcounts.mean().unwrap());
+        info!("stddev: {}", vcounts.stddev().unwrap());
+        info!("median v: {}", vcounts.percentile(50.0).unwrap());
+        info!("p25 v: {}", vcounts.percentile(25.0).unwrap());
+        info!("p75 v: {}", vcounts.percentile(75.0).unwrap());
+    }
 
     info!("Finished check");
     Ok(())
