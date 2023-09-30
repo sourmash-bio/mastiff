@@ -59,63 +59,58 @@ rule extract_rs_207_manifest:
 
 #######################################################################
 
-#rule metag_all:
-#    output: directory("/scratch/analysis/metag_k21_s{scaled,\d+}-roaring")
-#    params:
-#        scaled = "{scaled}"
-#    shell: """
-#        {EXEC} index -k 21 -s {params.scaled} \
-#            --output {output} \
-#            --save-paths \
-#            catalog_metagenomes
-#    """
-
-rule metag_all_update:
+rule metag_100:
+    output: directory("outputs/metag-100")
     input:
-        updated="updated_catalog"
-    params:
-        scaled = "1000"
+      storage="/data/wort/wort-sra",
+      manifest="inputs/metagenomes-k21-s1000-test.manifest"
+    threads: 24
     shell: """
-        {EXEC} update -k 21 -s {params.scaled} \
-            --output /scratch/analysis/metag_k21_s{params.scaled}-roaring \
-            --save-paths \
-            {input.updated}
+        export RAYON_NUM_THREADS={threads}
+        RUST_LOG=info {EXEC} index -k 21 -s 1000 \
+          --output {output} \
+          --manifest <(head -102 {input.manifest}) \
+          {input.storage}
     """
 
-rule metag_fullcolors:
-    output: directory("outputs/fullcolors")
+rule metag_200:
+    output: directory("outputs/metag-200")
+    input:
+      previous="outputs/metag-100",
+      storage="/data/wort/wort-sra",
+      manifest="inputs/metagenomes-k21-s1000-test.manifest"
+    threads: 24
     shell: """
-        {EXEC} index -k 21 -s 1000 \
-            --output {output} \
-            --colors \
-            <(head -1 catalog_metagenomes | xargs yes | head -1000)
+        export RAYON_NUM_THREADS={threads}
+        cp -a {input.previous} {output}
+        {EXEC} update -k 21 -s 1000 \
+          --output {output} \
+          --manifest <(head -202 {input.manifest}) \
+          {input.storage}
     """
 
-rule metag_1k:
-    output: directory("outputs/metag-1k")
+rule manifest_test:
+    output:
+        manifest="inputs/metagenomes-k{ksize}-s1000-test.manifest",
+    input:
+        catalog="outputs/metagenomes-catalog",
+    threads: 24,
     shell: """
-        {EXEC} index -k 21 -s 1000 \
+        export RAYON_NUM_THREADS={threads}
+        RUST_LOG=info {EXEC} manifest -k 21 \
             --output {output} \
-            --save-paths \
-            <(head -1000 catalog_metagenomes)
+            --basepath /data/wort/wort-sra \
+            <(head -2000 {input.catalog})
     """
 
-rule metag_1k_colors:
-    output: directory("outputs/metag-1k-colors")
-    shell: """
-        RUST_LOG=trace {EXEC} index -k 21 -s 1000 \
-            --output {output} \
-            --colors \
-            --save-paths \
-            <(head -1000 catalog_metagenomes)
-    """
+#######################################################################
 
 rule manifest_from_catalog:
     output:
         manifest="outputs/metagenomes-k{ksize}-s1000.manifest",
     input:
         catalog="outputs/metagenomes-catalog",
-    thread: 24,
+    threads: 24,
     shell: """
         export RAYON_NUM_THREADS={threads}
         RUST_LOG=info {EXEC} manifest -k 21 \

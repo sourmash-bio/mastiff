@@ -285,8 +285,10 @@ fn index<P: AsRef<Path>>(
         }
     } else {
         let manifest = manifest.ok_or_else(|| "Need a manifest")?;
+        assert!(location.as_ref().exists());
+        assert!(location.as_ref().is_dir());
         let storage = FSStorage::builder()
-            .fullpath("".into())
+            .fullpath(location.as_ref().into())
             .subdir("".into())
             .build();
         Collection::new(manifest, InnerStorage::new(storage))
@@ -323,8 +325,10 @@ fn update<P: AsRef<Path>>(
         }
     } else {
         let manifest = manifest.ok_or_else(|| "Need a manifest")?;
+        assert!(location.as_ref().exists());
+        assert!(location.as_ref().is_dir());
         let storage = FSStorage::builder()
-            .fullpath("".into())
+            .fullpath(location.as_ref().into())
             .subdir("".into())
             .build();
         Collection::new(manifest, InnerStorage::new(storage))
