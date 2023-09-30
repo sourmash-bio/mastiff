@@ -109,12 +109,26 @@ rule metag_1k_colors:
             <(head -1000 catalog_metagenomes)
     """
 
-rule new_catalog:
+rule manifest_from_catalog:
     output:
-        new_catalog="updated_catalog",
+        manifest="outputs/metagenomes-k{ksize}-s1000.manifest",
     input:
-        original="catalog_metagenomes",
-        runinfo="runinfo.csv"
+        catalog="outputs/metagenomes-catalog",
+    thread: 24,
+    shell: """
+        export RAYON_NUM_THREADS={threads}
+        RUST_LOG=info {EXEC} manifest -k 21 \
+            --output {output} \
+            --basepath /data/wort/wort-sra \
+            {input.catalog}
+    """
+
+rule catalog_metagenomes:
+    output:
+        catalog="outputs/metagenomes-catalog",
+    input:
+        runinfo="runinfo-20230817.csv",
+        basepath="/data/wort/wort-sra/"
     run:
         import csv
         from pathlib import Path
@@ -127,22 +141,11 @@ rule new_catalog:
                 if dataset['Run'] != 'Run':
                     sraids.add(dataset['Run'])
 
-        with open(output.new_catalog, 'w') as out:
-            # remove current datasets already in the catalog
-            with open(input.original) as fp:
-                for line in fp:
-                    # write current line (to keep order)
-                    out.write(line)
-
-                    parts = line.strip().split('/')
-                    sra_id = parts[-1].split('.')[0]
-                    if sra_id in sraids:
-                        sraids.remove(sra_id)
-
-            path = Path("/".join(parts[:-1]))
-            # check if remaining sraids exist on disk
+        path = Path(input.basepath)
+        with open(output.catalog, 'w') as out:
+            # check if sraids exist on disk
             for sra_id in sraids:
-                sig_path = path / f"{sra_id}.sig"
+                sig_path = path / "sigs" / f"{sra_id}.sig"
                 if sig_path.exists():
                     out.write(f"{sig_path}\n")
 

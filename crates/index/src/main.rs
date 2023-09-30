@@ -76,6 +76,24 @@ enum Commands {
             colors: bool,
         },
     */
+    Manifest {
+        /// File with list of paths to signatures
+        pathlist: PathBuf,
+
+        /// ksize
+        #[clap(short, long)]
+        ksize: Option<u8>,
+
+        /// Path for future FSStorage.
+        ///
+        /// Will be removed from a record internal location in manifest.
+        #[clap(short, long)]
+        basepath: Option<PathBuf>,
+
+        /// The path for output
+        #[clap(short, long)]
+        output: Option<PathBuf>,
+    },
     Check {
         /// The path for output
         output: PathBuf,
@@ -335,6 +353,62 @@ fn convert<P: AsRef<Path>>(_input: P, _output: P) -> Result<(), Box<dyn std::err
     */
 }
 
+fn manifest<P: AsRef<Path>>(
+    pathlist: P,
+    output: Option<P>,
+    selection: Option<Selection>,
+    basepath: Option<P>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    use std::fs::File;
+    use std::io::{BufRead, BufReader, BufWriter, Write};
+
+    let paths: Vec<PathBuf> = BufReader::new(File::open(pathlist.as_ref())?)
+        .lines()
+        .map(|line| {
+            let mut path = PathBuf::new();
+            path.push(line.unwrap());
+            path
+        })
+        .collect();
+
+    let manifest: Manifest = paths.as_slice().into();
+
+    let manifest = if let Some(selection) = selection {
+        manifest.select(&selection)?
+    } else {
+        manifest
+    };
+
+    let manifest = if let Some(basepath) = basepath {
+        let path: &str = basepath.as_ref().as_str();
+        manifest
+            .iter()
+            .map(|r| {
+                let mut record = r.clone();
+                record.set_internal_location(
+                    r.internal_location()
+                        .strip_prefix(path)
+                        .expect("Error stripping")
+                        .into(),
+                );
+                record
+            })
+            .collect::<Vec<_>>()
+            .into()
+    } else {
+        manifest
+    };
+
+    let out: Box<dyn Write + Send> = match output {
+        Some(path) => Box::new(BufWriter::new(File::create(path.as_ref()).unwrap())),
+        None => Box::new(std::io::stdout()),
+    };
+
+    manifest.to_writer(out)?;
+
+    Ok(())
+}
+
 fn check<P: AsRef<Path>>(output: P, quick: bool) -> Result<(), Box<dyn std::error::Error>> {
     info!("Opening DB");
     let db = RevIndex::open(output.as_ref(), true)?;
@@ -392,6 +466,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         Check { output, quick } => check(output, quick)?,
         Convert { input, output } => convert(input, output)?,
+        Manifest {
+            pathlist,
+            output,
+            ksize,
+            basepath,
+        } => {
+            let selection = ksize.map(|ksize| Selection::builder().ksize(ksize.into()).build());
+
+            manifest(pathlist, output, selection, basepath)?
+        }
         Search {
             query_path,
             output,
