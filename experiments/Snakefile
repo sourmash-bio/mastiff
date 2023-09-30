@@ -2,7 +2,8 @@ EXEC="cargo run -p mastiff-index --release -- "
 
 rule all:
 #    input: "outputs/rs207"
-    input: "outputs/rs207-2k"
+#    input: "outputs/rs207-2k"
+    input: expand("outputs/genbank-{domain}", domain=["archaea", "bacteria", "fungi", "protozoa", "viral"])
 
 rule rs207_1k:
     output: directory("outputs/rs207-1k")
@@ -148,6 +149,21 @@ rule catalog_metagenomes:
                 sig_path = path / "sigs" / f"{sra_id}.sig"
                 if sig_path.exists():
                     out.write(f"{sig_path}\n")
+                    out.flush()
+
+#######################################################################
+
+rule genbank:
+    output: directory("outputs/genbank-{domain}")
+    input: "/data/wort/databases/genbank-2022.03-{domain}-k21.zip"
+
+    shell: """
+        {EXEC} index -k 21 -s 1000 \
+            --output {output} \
+            {input}
+    """
+
+#######################################################################
 
 """
 {EXEC} index -k 21 -s 1000 --output /scratch/analysis/rocksdb_metagenomes catalog_metagenomes
