@@ -63,7 +63,7 @@ rule metag_100:
     output: directory("outputs/metag-100")
     input:
       storage="/data/wort/wort-sra",
-      manifest="inputs/metagenomes-k21-s1000-test.manifest"
+      manifest="outputs/metagenomes-k21-s1000.manifest",
     threads: 24
     shell: """
         export RAYON_NUM_THREADS={threads}
@@ -78,7 +78,7 @@ rule metag_200:
     input:
       previous="outputs/metag-100",
       storage="/data/wort/wort-sra",
-      manifest="inputs/metagenomes-k21-s1000-test.manifest"
+      manifest="outputs/metagenomes-k21-s1000.manifest",
     threads: 24
     shell: """
         export RAYON_NUM_THREADS={threads}
@@ -88,6 +88,22 @@ rule metag_200:
           --manifest <(head -202 {input.manifest}) \
           {input.storage}
     """
+
+rule metag:
+    output: directory("outputs/metag")
+    input:
+      storage="/data/wort/wort-sra",
+      manifest="outputs/metagenomes-k21-s1000.manifest",
+    threads: 24
+    shell: """
+        export RAYON_NUM_THREADS={threads}
+        RUST_LOG=info {EXEC} index -k 21 -s 1000 \
+          --output {output} \
+          --manifest {input.manifest} \
+          {input.storage}
+    """
+
+#######################################################################
 
 rule manifest_test:
     output:
