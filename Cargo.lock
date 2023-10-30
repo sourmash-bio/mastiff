@@ -327,9 +327,9 @@ dependencies = [
 
 [[package]]
 name = "bytecount"
-version = "0.6.3"
+version = "0.6.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c676a478f63e9fa2dd5368a42f28bba0d6c560b775f38583c8bbaa7fcd67c9c"
+checksum = "d1a12477b7237a01c11a80a51278165f9ba0edd28fa6db00a65ab230320dc58c"
 
 [[package]]
 name = "bytemuck"
@@ -339,9 +339,9 @@ checksum = "17febce684fd15d89027105661fec94afb475cb995fbc59d2865198446ba2eea"
 
 [[package]]
 name = "byteorder"
-version = "1.4.3"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
+checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
 name = "bytes"
@@ -1423,9 +1423,9 @@ dependencies = [
 
 [[package]]
 name = "memmap2"
-version = "0.8.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43a5a03cefb0d953ec0be133036f14e109412fa594edc2f77227249db66cc3ed"
+checksum = "deaba38d7abf1d4cca21cc89e932e542ba2b9258664d2a9ef0e61512039c9375"
 dependencies = [
  "libc",
 ]
@@ -2550,6 +2550,7 @@ checksum = "c361f1b577b7528df46d04ee4d800a2fb4eafd44f187940789e8ab7fd378b509"
 [[package]]
 name = "sourmash"
 version = "0.12.0"
+source = "git+https://github.com/sourmash-bio/sourmash?branch=lirber/mastiff#a4949b096f6f59210e3e9d6283ce696342a82e8c"
 dependencies = [
  "az",
  "bytecount",
@@ -2566,7 +2567,7 @@ dependencies = [
  "histogram",
  "log",
  "md5",
- "memmap2 0.8.0",
+ "memmap2 0.9.0",
  "murmurhash3",
  "niffler",
  "nohash-hasher",

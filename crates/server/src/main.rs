@@ -93,7 +93,7 @@ fn main() -> Result<()> {
     let threshold = opts.threshold_bp / mh.scaled() as usize;
 
     let state = Arc::new(State {
-        db: Arc::new(RevIndex::open(opts.index.as_ref(), true)),
+        db: Arc::new(RevIndex::open(opts.index, true).expect("Error opening DB")),
         template: Arc::new(Sketch::MinHash(mh)),
         threshold,
     });
