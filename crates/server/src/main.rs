@@ -6,7 +6,7 @@ use axum::{
     extract::{ContentLengthLimit, Extension},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get_service, post},
+    routing::{get, get_service, post},
     Router,
 };
 use sentry::integrations::tower::{NewSentryLayer, SentryHttpLayer};
@@ -101,6 +101,7 @@ fn main() -> Result<()> {
     // Build our application by composing routes
     let app = Router::new()
         .route("/search", post(search))
+        .route("/health", get(health))
         //.route("/gather", post(gather))
         .fallback(get_service(ServeDir::new(opts.assets)).handle_error(handle_static_serve_error))
         // Add middleware to all routes
@@ -221,6 +222,10 @@ async fn search(
         )
             .into_response(),
     }
+}
+
+async fn health() -> Response<BoxBody> {
+    (StatusCode::OK, "I'm doing science and I'm still alive").into_response()
 }
 
 async fn handle_static_serve_error(error: std::io::Error) -> impl IntoResponse {
