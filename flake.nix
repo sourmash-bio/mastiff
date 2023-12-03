@@ -7,8 +7,6 @@
     crane = {
       url = "github:ipetkov/crane";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.rust-overlay.follows = "rust-overlay";
-      inputs.flake-utils.follows = "flake-utils";
     };
 
     flake-utils.url = "github:numtide/flake-utils";
@@ -146,9 +144,8 @@
 
           buildInputs = with pkgs; [
               oha
-              awscli2
+              #awscli2
               rclone
-              terraform
               nixpkgs-fmt
               asciinema
               asciinema-agg
