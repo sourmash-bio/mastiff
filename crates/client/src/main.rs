@@ -107,7 +107,7 @@ fn main() -> Result<()> {
         let mut sigs = Signature::load_signatures(
             &mut reader,
             Some(21),
-            Some(HashFunctions::murmur64_DNA),
+            Some(HashFunctions::Murmur64Dna),
             Some(1000),
         )?;
 

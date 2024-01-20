@@ -6,7 +6,7 @@ use axum::{
     extract::{ContentLengthLimit, Extension},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get_service, post},
+    routing::{get, get_service, post},
     Router,
 };
 use sentry::integrations::tower::{NewSentryLayer, SentryHttpLayer};
@@ -18,7 +18,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use clap::Parser;
 use color_eyre::eyre::Result;
-use sourmash::index::revindex::RevIndex;
+use sourmash::index::revindex::{RevIndex, RevIndexOps};
 use sourmash::signature::{Signature, SigsTrait};
 use sourmash::sketch::minhash::{max_hash_for_scaled, KmerMinHash};
 use sourmash::sketch::Sketch;
@@ -93,7 +93,7 @@ fn main() -> Result<()> {
     let threshold = opts.threshold_bp / mh.scaled() as usize;
 
     let state = Arc::new(State {
-        db: Arc::new(RevIndex::open(opts.index.as_ref(), true)),
+        db: Arc::new(RevIndex::open(opts.index, true).expect("Error opening DB")),
         template: Arc::new(Sketch::MinHash(mh)),
         threshold,
     });
@@ -101,6 +101,7 @@ fn main() -> Result<()> {
     // Build our application by composing routes
     let app = Router::new()
         .route("/search", post(search))
+        .route("/health", get(health))
         //.route("/gather", post(gather))
         .fallback(get_service(ServeDir::new(opts.assets)).handle_error(handle_static_serve_error))
         // Add middleware to all routes
@@ -159,8 +160,9 @@ impl State {
                 Err("Could not extract compatible sketch to compare")
             }
         })
-        .await? else {
-            return Err("Could not extract compatible sketch to compare".into())
+        .await?
+        else {
+            return Err("Could not extract compatible sketch to compare".into());
         };
 
         let mut csv = vec!["SRA accession,containment".into()];
@@ -220,6 +222,10 @@ async fn search(
         )
             .into_response(),
     }
+}
+
+async fn health() -> Response<BoxBody> {
+    (StatusCode::OK, "I'm doing science and I'm still alive").into_response()
 }
 
 async fn handle_static_serve_error(error: std::io::Error) -> impl IntoResponse {
