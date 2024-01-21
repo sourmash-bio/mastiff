@@ -1,5 +1,10 @@
 # Mastiff
 
+> [!IMPORTANT]  
+> **ARCHIVED REPO**
+> 
+> See https://github.com/sourmash-bio/branchwater for updates
+
 > "If [smol](https://github.com/luizirber/phd/tree/master/experiments/smol_gather)
 > is the tiniest and cutest gather, then the fastest gather should be
 > [greyhound](https://github.com/luizirber/2020-11-02-greyhound)!"
